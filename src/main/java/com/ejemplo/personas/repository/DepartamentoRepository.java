@@ -1,13 +1,15 @@
 package com.ejemplo.personas.repository;
 
-import com.ejemplo.personas.model.Usuario;
+import com.ejemplo.personas.model.Departamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import java.util.List;
 
+public interface DepartamentoRepository extends JpaRepository<Departamento, Long> {
 
-public interface UsuarioRepository extends JpaRepository <Usuario, Long> {
-    Optional<Usuario> findByUsername(String username);
+    List<Departamento> findAllByOrderByNombreAsc();
 
-    boolean existsByUsername(String username);
+    boolean existsByNombreIgnoreCase(String nombre);
+
+    boolean existsByNombreIgnoreCaseAndIdNot(String nombre, Long id);
 }

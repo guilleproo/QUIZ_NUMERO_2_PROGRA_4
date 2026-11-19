@@ -1,78 +1,77 @@
 package com.ejemplo.personas.service;
 
-import com.ejemplo.personas.model.Usuario;
-import com.ejemplo.personas.repository.UsuarioRepository;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.ejemplo.personas.model.Departamento;
+import com.ejemplo.personas.repository.DepartamentoRepository;
+import com.ejemplo.personas.repository.EmpleadoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
-@Service 
-public class UsuarioService {
-    
-    private final UsuarioRepository repo;
-    private final PasswordEncoder passwordEncoder;
+@Service
+@Transactional
+public class DepartamentoService {
 
-    public UsuarioService(UsuarioRepository repo, PasswordEncoder passwordEncoder){
-        this.repo = repo;
-        this.passwordEncoder=passwordEncoder;
+    private final DepartamentoRepository departamentoRepository;
+    private final EmpleadoRepository empleadoRepository;
+
+    public DepartamentoService(DepartamentoRepository departamentoRepository,
+                               EmpleadoRepository empleadoRepository) {
+        this.departamentoRepository = departamentoRepository;
+        this.empleadoRepository = empleadoRepository;
     }
 
-    //LISTAR USUARIOS
-    public List<Usuario> listar(){
-        return repo.findAll();
+    @Transactional(readOnly = true)
+    public List<Departamento> listarTodos() {
+        return departamentoRepository.findAllByOrderByNombreAsc();
     }
 
-    //Listar 1 usuario
-    public Usuario buscarPorId(Long id){
-        return repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado" + id));
+    @Transactional(readOnly = true)
+    public Departamento buscarPorId(Long id) {
+        return departamentoRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Departamento no encontrado con id: " + id));
     }
 
-    //CREAR USUARIOS 
-    @Transactional 
-    public Usuario crear(Usuario usuario){
-        if (repo.existsByUsername(usuario.getUsername())){
-            throw new IllegalArgumentException("Este usuario ya existe!");
-        }
-        if(usuario.getPassword() == null || usuario.getPassword().isBlank()){
-            throw new IllegalArgumentException("La contrasena es obligatoria!");
-        }
-        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
-        return repo.save(usuario);
+    public Departamento crear(Departamento departamento) {
+        String nombreLimpio = departamento.getNombre().trim();
+        departamento.setNombre(nombreLimpio);
+        departamento.setUbicacion(departamento.getUbicacion().trim());
 
-    }
-
-    //ACTUALIZAR USUARIOS 
-    @Transactional 
-    public Usuario actualizar(Long id, Usuario datos){
-        Usuario existente = buscarPorId(id);
-
-        if(!existente.getUsername().equals(datos.getUsername())
-            && repo.existsByUsername(datos.getUsername())){
-                throw new IllegalArgumentException("El username ya existe!");
-            }
-
-        existente.setNombre(datos.getNombre());
-        existente.setUsername(datos.getUsername());
-        existente.setEmail(datos.getEmail());
-        existente.setRol(datos.getRol());
-
-        if (datos.getPassword() != null && !datos.getPassword().isBlank()){
-            existente.setPassword(passwordEncoder.encode(datos.getPassword()));
+        if (departamentoRepository.existsByNombreIgnoreCase(nombreLimpio)) {
+            throw new IllegalArgumentException("Ya existe un departamento con ese nombre");
         }
 
-        return repo.save(existente);
-
+        return departamentoRepository.save(departamento);
     }
 
-    //ELIMINAR 
-    @Transactional 
-    public void eliminar(Long id){
-        repo.deleteById(id);
+    public Departamento actualizar(Long id, Departamento datosActualizados) {
+        Departamento existente = buscarPorId(id);
+
+        String nombreLimpio = datosActualizados.getNombre().trim();
+        if (departamentoRepository.existsByNombreIgnoreCaseAndIdNot(nombreLimpio, id)) {
+            throw new IllegalArgumentException("Ya existe un departamento con ese nombre");
+        }
+
+        BigDecimal planillaActual = empleadoRepository.sumarSalariosPorDepartamento(id);
+        if (datosActualizados.getPresupuesto().compareTo(planillaActual) < 0) {
+            throw new IllegalArgumentException("El presupuesto no puede ser menor a la planilla actual");
+        }
+
+        existente.setNombre(nombreLimpio);
+        existente.setUbicacion(datosActualizados.getUbicacion().trim());
+        existente.setPresupuesto(datosActualizados.getPresupuesto());
+
+        return departamentoRepository.save(existente);
     }
 
+    public void eliminar(Long id) {
+        buscarPorId(id);
 
+        if (empleadoRepository.countByDepartamentoId(id) > 0) {
+            throw new IllegalStateException("No se puede eliminar un departamento con empleados asignados");
+        }
+
+        departamentoRepository.deleteById(id);
+    }
 }

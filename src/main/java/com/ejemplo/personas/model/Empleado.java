@@ -1,97 +1,120 @@
 package com.ejemplo.personas.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Entity 
-@Table(name = "mascotas")
-public class Mascota {
-    
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Long id; 
+@Entity
+@Table(name = "empleados")
+public class Empleado {
 
-    @NotBlank(message = "El nombre de la mascota es obligatorio")
-    @Size(max = 50, message = "Maximo 50 caracteres")
-    private String nombre; 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @NotNull (message = "Seleccione una especie")
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 80, message = "El nombre no puede superar los 80 caracteres")
+    @Column(nullable = false, length = 80)
+    private String nombre;
+
+    @NotBlank(message = "La cedula es obligatoria")
+    @Pattern(regexp = "\\d{9}", message = "La cedula debe tener exactamente 9 dígitos")
+    @Column(nullable = false, unique = true, length = 9)
+    private String cedula;
+
+    @NotBlank(message = "El correo electronico es obligatorio")
+    @Email(message = "Debe ingresar un correo electronico valido")
+    @Column(nullable = false, length = 120)
+    private String email;
+
+    @NotNull(message = "El puesto es obligatorio")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20) 
-    private Especie especie;
+    @Column(nullable = false, length = 20)
+    private Puesto puesto;
 
-    @Size (max = 50, message = "Maximo 50 caracteres")
-    private String raza;
+    @NotNull(message = "El salario es obligatorio")
+    @Positive(message = "El salario debe ser mayor a cero")
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal salario;
 
-    @NotNull (message = "La fecha de nacimiento es obligatorio")
-    @PastOrPresent (message = "La fecha no puede ser futura")
-    @DateTimeFormat (iso = DateTimeFormat.ISO.DATE) //YYYY-MM-DD
-    private LocalDate fechaNacimiento;
+    @NotNull(message = "La fecha de ingreso es obligatoria")
+    @PastOrPresent(message = "La fecha de ingreso no puede ser futura")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    @Column(name = "fecha_ingreso", nullable = false)
+    private LocalDate fechaIngreso;
 
-    @ManyToOne (fetch = FetchType.LAZY, optional = false)
-    @JoinColumn (name = "usuario_id", nullable = false)
-    private Usuario usuario;
+    @NotNull(message = "El departamento es obligatorio")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "departamento_id", nullable = false)
+    private Departamento departamento;
 
-    public Mascota(){}
-
-    public Mascota(String nombre, Especie especie, String raza, LocalDate fechaNacimiento ){
-        this.nombre = nombre; 
-        this.especie = especie;
-        this.raza = raza; 
-        this.fechaNacimiento = fechaNacimiento;
+    public Empleado() {
     }
 
-    public Long getId(){
+    public Long getId() {
         return id;
     }
 
-    public void setId(Long id){
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getNombre(){
+    public String getNombre() {
         return nombre;
     }
 
-    public void setNombre(String nombre){
+    public void setNombre(String nombre) {
         this.nombre = nombre;
     }
 
-    public Especie getEspecie(){
-        return especie;
+    public String getCedula() {
+        return cedula;
     }
 
-    public void setEspecie(Especie especie){
-        this.especie = especie;
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
     }
 
-    public String getRaza(){
-        return raza;
+    public String getEmail() {
+        return email;
     }
 
-    public void setRaza(String raza){
-        this.raza = raza;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
-    public LocalDate getFechaNacimiento(){
-        return fechaNacimiento;
+    public Puesto getPuesto() {
+        return puesto;
     }
 
-    public void setFechaNacimiento(LocalDate fechaNacimiento){
-        this.fechaNacimiento = fechaNacimiento;
+    public void setPuesto(Puesto puesto) {
+        this.puesto = puesto;
     }
 
-    public Usuario getUsuario(){
-        return usuario;
+    public BigDecimal getSalario() {
+        return salario;
     }
 
-    public void setUsuario(Usuario usuario){
-        this.usuario = usuario;
+    public void setSalario(BigDecimal salario) {
+        this.salario = salario;
+    }
+
+    public LocalDate getFechaIngreso() {
+        return fechaIngreso;
+    }
+
+    public void setFechaIngreso(LocalDate fechaIngreso) {
+        this.fechaIngreso = fechaIngreso;
+    }
+
+    public Departamento getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(Departamento departamento) {
+        this.departamento = departamento;
     }
 }

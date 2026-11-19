@@ -1,110 +1,129 @@
 package com.ejemplo.personas.controller;
 
-import com.ejemplo.personas.model.Usuario;
-import com.ejemplo.personas.service.UsuarioService;
+import com.ejemplo.personas.model.Departamento;
+import com.ejemplo.personas.service.DepartamentoService;
+import com.ejemplo.personas.service.EmpleadoService;
 import jakarta.validation.Valid;
-
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
+@Controller
+@RequestMapping("/departamentos")
+public class DepartamentoController {
 
-@Controller 
-@RequestMapping("/usuarios")
-public class UsuarioController {
+    private final DepartamentoService departamentoService;
+    private final EmpleadoService empleadoService;
 
-    private final UsuarioService service;
-
-    public UsuarioController(UsuarioService service){
-        this.service = service;
+    public DepartamentoController(DepartamentoService departamentoService,
+                                  EmpleadoService empleadoService) {
+        this.departamentoService = departamentoService;
+        this.empleadoService = empleadoService;
     }
 
-    //Leer Usuarios 
     @GetMapping
     public String listar(Model model) {
-        model.addAttribute("usuarios", service.listar());
-        return "usuarios/lista";
+        List<Departamento> departamentos = departamentoService.listarTodos();
+
+        Map<Long, Integer> cantidades = new LinkedHashMap<>();
+        Map<Long, BigDecimal> planillas = new LinkedHashMap<>();
+        Map<Long, BigDecimal> disponibles = new LinkedHashMap<>();
+
+        for (Departamento dept : departamentos) {
+            int cantidad = empleadoService.listarPorDepartamento(dept.getId()).size();
+            BigDecimal planilla = empleadoService.listarPorDepartamento(dept.getId()).stream()
+                    .map(e -> e.getSalario() != null ? e.getSalario() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal presupuesto = dept.getPresupuesto() != null ? dept.getPresupuesto() : BigDecimal.ZERO;
+            BigDecimal disponible = presupuesto.subtract(planilla);
+
+            cantidades.put(dept.getId(), cantidad);
+            planillas.put(dept.getId(), planilla);
+            disponibles.put(dept.getId(), disponible);
+        }
+
+        model.addAttribute("departamentos", departamentos);
+        model.addAttribute("cantidades", cantidades);
+        model.addAttribute("planillas", planillas);
+        model.addAttribute("disponibles", disponibles);
+        return "departamentos/lista";
     }
 
-    //Crear Usuarios 
     @GetMapping("/nuevo")
-    public String nuevo(Model model) {
-        model.addAttribute("usuario", new Usuario());
-        model.addAttribute("modo","crear");
-        return "usuarios/formulario";
+    public String mostrarFormularioNuevo(Model model) {
+        model.addAttribute("departamento", new Departamento());
+        return "departamentos/formulario";
     }
-    
+
     @PostMapping("/guardar")
-    public String guardar(@Valid @ModelAttribute("usuario") Usuario usuario,
-            BindingResult errores, Model model, RedirectAttributes flash) {
-                if (errores.hasErrors()){
-                    model.addAttribute("modo", "crear");
-                    return "usuarios/formulario";
-                }
-                try {
-                    service.crear(usuario);
-                    flash.addFlashAttribute("mensaje", "Usuario creado correctamente");
-                    return "redirect:/usuarios";
-                } catch (IllegalArgumentException e){
-                    model.addAttribute("modo", "crear");
-                    model.addAttribute("error", e.getMessage());
-                    return "usuarios/formulario";
-                }
-        
+    public String guardar(@Valid @ModelAttribute("departamento") Departamento departamento,
+                          BindingResult result,
+                          RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "departamentos/formulario";
+        }
+
+        try {
+            departamentoService.crear(departamento);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Departamento guardado correctamente");
+            return "redirect:/departamentos";
+        } catch (IllegalArgumentException ex) {
+            result.rejectValue("nombre", "error.departamento", ex.getMessage());
+            return "departamentos/formulario";
+        }
     }
 
-
-    ///Actualizar usuarios 
-    
     @GetMapping("/{id}/editar")
-    public String editar(@PathVariable Long id, Model model) {
-        Usuario u = service.buscarPorId(id);
-        u.setPassword("");
-        model.addAttribute("usuario", u);
-        model.addAttribute("modo", "editar");
-        return "usuarios/formulario";
+    public String mostrarFormularioEditar(@PathVariable Long id,
+                                          Model model,
+                                          RedirectAttributes redirectAttributes) {
+        try {
+            Departamento departamento = departamentoService.buscarPorId(id);
+            model.addAttribute("departamento", departamento);
+            return "departamentos/formulario";
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
+            return "redirect:/departamentos";
+        }
     }
 
     @PostMapping("/{id}/actualizar")
-    public String actualizar(@PathVariable Long id, 
-                             @Valid @ModelAttribute ("usuario") Usuario usuario, 
-                             BindingResult errores, Model model, RedirectAttributes flash){
-        if(errores.hasErrors()){
-            usuario.setId(id);
-            model.addAttribute("modo", "editar");
-            return "usuarios/formulario";
-        }
-        try {
-            service.actualizar(id, usuario);
-            flash.addFlashAttribute("mensaje", "Usuario actualizado correctamente");
-            return "redirect:/usuarios";
-        } catch (IllegalArgumentException e){
-            usuario.setId(id);
-            model.addAttribute("modo", "editar");
-            model.addAttribute("error", e.getMessage());
-            return "usuarios/formulario";
+    public String actualizar(@PathVariable Long id,
+                             @Valid @ModelAttribute("departamento") Departamento departamento,
+                             BindingResult result,
+                             Model model,
+                             RedirectAttributes redirectAttributes) {
+        departamento.setId(id);
+
+        if (result.hasErrors()) {
+            return "departamentos/formulario";
         }
 
+        try {
+            departamentoService.actualizar(id, departamento);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Departamento actualizado correctamente");
+            return "redirect:/departamentos";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("errorNegocio", ex.getMessage());
+            return "departamentos/formulario";
+        }
     }
-    
-    
-    //Eliminar un Usuario 
+
     @PostMapping("/{id}/eliminar")
-    public String eliminar(@PathVariable Long id, RedirectAttributes flash) {
-        service.eliminar(id);
-        flash.addFlashAttribute("mensaje", "Usuario elimininado con exito!");
-        return "redirect:/usuarios";
+    public String eliminar(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            departamentoService.eliminar(id);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Departamento eliminado correctamente");
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
+        }
+        return "redirect:/departamentos";
     }
-    
-    
-    
 }

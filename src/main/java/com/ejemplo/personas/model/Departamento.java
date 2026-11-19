@@ -1,115 +1,91 @@
 package com.ejemplo.personas.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
-@Entity 
-@Table(name="usuarios")
-public class Usuario {
-    
-    @Id 
+@Entity
+@Table(name = "departamentos")
+public class Departamento {
+
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; 
+    private Long id;
 
-    @NotBlank (message = "El nombre es requerido!")
-    @Size (max=100)
-    private String nombre; 
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 60, message = "El nombre no puede superar los 60 caracteres")
+    @Column(nullable = false, unique = true, length = 60)
+    private String nombre;
 
-    @NotBlank (message = "El username es requerido!")
-    @Size (min=3, max=50, message = "El username debe contener entre 3 y 50 caracteres")
-    @Column (unique=true, nullable = false)
-    private String username;
+    @NotBlank(message = "La ubicacion es obligatoria")
+    @Size(max = 100, message = "La ubicacion no puede superar los 100 caracteres")
+    @Column(nullable = false, length = 100)
+    private String ubicacion;
 
-    @NotBlank (message = "El email es requerido!")
-    @Email (message ="Correo no valido!")
-    private String email; 
+    @NotNull(message = "El presupuesto es obligatorio")
+    @PositiveOrZero(message = "El presupuesto no puede ser negativo")
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal presupuesto;
 
-    @Column (nullable = false)
-    private String password;
+    @OneToMany(mappedBy = "departamento")
+    private List<Empleado> empleados = new ArrayList<>();
 
-    @Column (nullable = false)
-    private String rol ="USER";
-
-    @OneToMany (mappedBy = "usuario", cascade = CascadeType.ALL)
-    private List<Mascota> mascotas = new ArrayList<>();
-
-
-    public List<Mascota> getMascotas(){
-        return mascotas;
+    public Departamento() {
     }
 
-    public void agregarMascota(Mascota mascota){
-        mascotas.add(mascota);
-        mascota.setUsuario(this);
+    public void agregarEmpleado(Empleado empleado) {
+        empleados.add(empleado);
+        empleado.setDepartamento(this);
     }
 
-    public void quitarMascota(Mascota mascota){
-        mascotas.remove(mascota);
-        mascota.setUsuario(null);
+    public void quitarEmpleado(Empleado empleado) {
+        empleados.remove(empleado);
+        empleado.setDepartamento(null);
     }
 
-    public Usuario(){}
-
-    public Usuario(String nombre, String username, String email, String password, String rol){
-    this.nombre = nombre; 
-    this.username = username; 
-    this.email = email;
-    this.password = password;
-    this.rol = rol; 
-    }
-
-    //Getters y Setters 
-    public Long getId(){
+    public Long getId() {
         return id;
     }
 
-    public void setId(Long id){
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public String getNombre(){
+    public String getNombre() {
         return nombre;
     }
 
-    public void setNombre(String nombre){
+    public void setNombre(String nombre) {
         this.nombre = nombre;
     }
 
-    public String getUsername(){
-        return username;
+    public String getUbicacion() {
+        return ubicacion;
     }
 
-    public void setUsername(String username){
-        this.username = username;
+    public void setUbicacion(String ubicacion) {
+        this.ubicacion = ubicacion;
     }
 
-    public String getEmail(){
-        return email;
+    public BigDecimal getPresupuesto() {
+        return presupuesto;
     }
 
-    public void setEmail(String email){
-        this.email = email;
+    public void setPresupuesto(BigDecimal presupuesto) {
+        this.presupuesto = presupuesto;
     }
 
-    public String getPassword(){
-        return password;
+    public List<Empleado> getEmpleados() {
+        return empleados;
     }
 
-    public void setPassword(String password){
-        this.password = password;
-    }
-
-    public String getRol(){
-        return rol;
-    }
-
-    public void setRol(String rol){
-        this.rol = rol;
+    public void setEmpleados(List<Empleado> empleados) {
+        this.empleados = empleados;
     }
 }
-

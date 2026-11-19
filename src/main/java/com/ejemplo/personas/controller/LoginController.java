@@ -3,10 +3,9 @@ package com.ejemplo.personas.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+// Controlador de Login
 
-//Controlador de Login
-
-@Controller 
+@Controller
 public class LoginController {
 
     @GetMapping("/login")
@@ -16,9 +15,6 @@ public class LoginController {
 
     @GetMapping("/")
     public String inicio() {
-        return "redirect:/usuarios";
+        return "redirect:/departamentos";
     }
-    
-    
-    
 }

@@ -1,9 +1,10 @@
 package com.ejemplo.personas.controller;
 
-import com.ejemplo.personas.model.Especie;
-import com.ejemplo.personas.model.Mascota;
-import com.ejemplo.personas.service.MascotaService;
-import com.ejemplo.personas.service.UsuarioService;
+import com.ejemplo.personas.model.Departamento;
+import com.ejemplo.personas.model.Empleado;
+import com.ejemplo.personas.model.Puesto;
+import com.ejemplo.personas.service.DepartamentoService;
+import com.ejemplo.personas.service.EmpleadoService;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -11,102 +12,127 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
-@RequestMapping("/mascotas")
-public class MascotaController {
+@RequestMapping("/empleados")
+public class EmpleadoController {
 
-    private final MascotaService mascotaService;
-    private final UsuarioService usuarioService;
+    private final EmpleadoService empleadoService;
+    private final DepartamentoService departamentoService;
 
-    public MascotaController(MascotaService mascotaService, UsuarioService usuarioService) {
-        this.mascotaService = mascotaService;
-        this.usuarioService = usuarioService;
+    public EmpleadoController(EmpleadoService empleadoService,
+                              DepartamentoService departamentoService) {
+        this.empleadoService = empleadoService;
+        this.departamentoService = departamentoService;
     }
 
-    // LISTAR
     @GetMapping
-    public String listar(@RequestParam(required = false) Long usuarioId, Model model) {
-        if (usuarioId != null) {
-            model.addAttribute("mascotas", mascotaService.listarPorUsuario(usuarioId));
-            model.addAttribute("dueno", usuarioService.buscarPorId(usuarioId));
-        } else {
-            model.addAttribute("mascotas", mascotaService.listar());
-        }
-        return "mascotas/lista";
+    public String listar(@RequestParam(name = "departamentoId", required = false) Long departamentoId,
+                         Model model) {
+        List<Empleado> empleados = empleadoService.listarPorDepartamento(departamentoId);
+        model.addAttribute("empleados", empleados);
+        model.addAttribute("departamentos", departamentoService.listarTodos());
+        model.addAttribute("departamentoIdSeleccionado", departamentoId);
+        return "empleados/lista";
     }
 
-    // CREAR
     @GetMapping("/nuevo")
-    public String nuevo(@RequestParam(required = false) Long usuarioId, Model model) {
-        model.addAttribute("mascota", new Mascota());
-        prepararFormulario(model, "crear", usuarioId);   // usuarioId pre-selecciona el dueño
-        return "mascotas/formulario";
+    public String mostrarFormularioNuevo(@RequestParam(name = "departamentoId", required = false) Long departamentoId,
+                                         Model model) {
+        Empleado empleado = new Empleado();
+        if (departamentoId != null) {
+            Departamento dept = departamentoService.buscarPorId(departamentoId);
+            empleado.setDepartamento(dept);
+        }
+
+        model.addAttribute("empleado", empleado);
+        model.addAttribute("departamentoId", departamentoId);
+        cargarCatalogos(model);
+        return "empleados/formulario";
     }
 
     @PostMapping("/guardar")
-    public String guardar(@Valid @ModelAttribute("mascota") Mascota mascota,
-                          BindingResult errores,
-                          @RequestParam(required = false) Long usuarioId,
-                          Model model, RedirectAttributes flash) {
-        if (errores.hasErrors()) {
-            prepararFormulario(model, "crear", usuarioId);
-            return "mascotas/formulario";
+    public String guardar(@Valid @ModelAttribute("empleado") Empleado empleado,
+                          BindingResult result,
+                          @RequestParam(name = "departamentoId", required = false) Long departamentoId,
+                          Model model,
+                          RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            model.addAttribute("departamentoId", departamentoId);
+            cargarCatalogos(model);
+            return "empleados/formulario";
         }
+
         try {
-            mascotaService.crear(mascota, usuarioId);
-            flash.addFlashAttribute("mensaje", "Mascota registrada correctamente");
-            return "redirect:/mascotas?usuarioId=" + usuarioId;
-        } catch (IllegalArgumentException e) {
-            prepararFormulario(model, "crear", usuarioId);
-            model.addAttribute("error", e.getMessage());
-            return "mascotas/formulario";
+            empleadoService.crear(empleado, departamentoId);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Empleado guardado correctamente");
+            return "redirect:/empleados";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("errorNegocio", ex.getMessage());
+            model.addAttribute("departamentoId", departamentoId);
+            cargarCatalogos(model);
+            return "empleados/formulario";
         }
     }
 
-    // ACTUALIZAR
     @GetMapping("/{id}/editar")
-    public String editar(@PathVariable Long id, Model model) {
-        Mascota mascota = mascotaService.buscarPorId(id);
-        model.addAttribute("mascota", mascota);
-        prepararFormulario(model, "editar", mascota.getUsuario().getId());
-        return "mascotas/formulario";
+    public String mostrarFormularioEditar(@PathVariable Long id,
+                                          Model model,
+                                          RedirectAttributes redirectAttributes) {
+        try {
+            Empleado empleado = empleadoService.buscarPorId(id);
+            Long deptoId = empleado.getDepartamento() != null ? empleado.getDepartamento().getId() : null;
+            model.addAttribute("empleado", empleado);
+            model.addAttribute("departamentoId", deptoId);
+            cargarCatalogos(model);
+            return "empleados/formulario";
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
+            return "redirect:/empleados";
+        }
     }
 
     @PostMapping("/{id}/actualizar")
     public String actualizar(@PathVariable Long id,
-                             @Valid @ModelAttribute("mascota") Mascota mascota,
-                             BindingResult errores,
-                             @RequestParam(required = false) Long usuarioId,
-                             Model model, RedirectAttributes flash) {
-        if (errores.hasErrors()) {
-            mascota.setId(id);
-            prepararFormulario(model, "editar", usuarioId);
-            return "mascotas/formulario";
+                             @Valid @ModelAttribute("empleado") Empleado empleado,
+                             BindingResult result,
+                             @RequestParam(name = "departamentoId", required = false) Long departamentoId,
+                             Model model,
+                             RedirectAttributes redirectAttributes) {
+        empleado.setId(id);
+
+        if (result.hasErrors()) {
+            model.addAttribute("departamentoId", departamentoId);
+            cargarCatalogos(model);
+            return "empleados/formulario";
         }
+
         try {
-            mascotaService.actualizar(id, mascota, usuarioId);
-            flash.addFlashAttribute("mensaje", "Mascota actualizada");
-            return "redirect:/mascotas?usuarioId=" + usuarioId;
-        } catch (IllegalArgumentException e) {
-            mascota.setId(id);
-            prepararFormulario(model, "editar", usuarioId);
-            model.addAttribute("error", e.getMessage());
-            return "mascotas/formulario";
+            empleadoService.actualizar(id, empleado, departamentoId);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Empleado actualizado correctamente");
+            return "redirect:/empleados";
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("errorNegocio", ex.getMessage());
+            model.addAttribute("departamentoId", departamentoId);
+            cargarCatalogos(model);
+            return "empleados/formulario";
         }
     }
 
-    // ELIMINAR
     @PostMapping("/{id}/eliminar")
-    public String eliminar(@PathVariable Long id, RedirectAttributes flash) {
-        mascotaService.eliminar(id);
-        flash.addFlashAttribute("mensaje", "Mascota eliminada");
-        return "redirect:/mascotas";
+    public String eliminar(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            empleadoService.eliminar(id);
+            redirectAttributes.addFlashAttribute("mensajeExito", "Empleado eliminado correctamente");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("mensajeError", ex.getMessage());
+        }
+        return "redirect:/empleados";
     }
 
-    private void prepararFormulario(Model model, String modo, Long usuarioId) {
-        model.addAttribute("modo", modo);
-        model.addAttribute("usuarios", usuarioService.listar());
-        model.addAttribute("especies", Especie.values());
-        model.addAttribute("usuarioId", usuarioId);
+    private void cargarCatalogos(Model model) {
+        model.addAttribute("departamentos", departamentoService.listarTodos());
+        model.addAttribute("puestos", Puesto.values());
     }
 }

@@ -1,39 +1,89 @@
 package com.ejemplo.personas.config;
 
-import com.ejemplo.personas.model.Especie;
-import com.ejemplo.personas.model.Mascota;
-import com.ejemplo.personas.model.Usuario;
-import com.ejemplo.personas.repository.UsuarioRepository;
-import com.ejemplo.personas.service.MascotaService;
-import com.ejemplo.personas.service.UsuarioService;
+import com.ejemplo.personas.model.Departamento;
+import com.ejemplo.personas.model.Empleado;
+import com.ejemplo.personas.model.Puesto;
+import com.ejemplo.personas.service.DepartamentoService;
+import com.ejemplo.personas.service.EmpleadoService;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Configuration
-public class DataInitializer {
+@Component
+public class DataInitializer implements CommandLineRunner {
 
-    @Bean
-    CommandLineRunner cargarDatos(UsuarioRepository repo,
-                                  UsuarioService usuarioService,
-                                  MascotaService mascotaService) {
-        return args -> {
-            if (repo.count() == 0) {
-                Usuario admin = usuarioService.crear(
-                        new Usuario("Administrador", "admin", "admin@ejemplo.com", "admin123", "ADMIN"));
-                Usuario maria = usuarioService.crear(
-                        new Usuario("María Pérez", "maria", "maria@ejemplo.com", "maria123", "USER"));
+    private final DepartamentoService departamentoService;
+    private final EmpleadoService empleadoService;
 
-                // María tiene 2 mascotas, el admin tiene 1 -> relación 1 a muchos
-                mascotaService.crear(new Mascota("Firulais", Especie.PERRO, "Zaguate",
-                        LocalDate.of(2020, 3, 15)), maria.getId());
-                mascotaService.crear(new Mascota("Michi", Especie.GATO, "Siamés",
-                        LocalDate.of(2022, 7, 1)), maria.getId());
-                mascotaService.crear(new Mascota("Rocky", Especie.PERRO, "Labrador",
-                        LocalDate.of(2019, 11, 20)), admin.getId());
-            }
-        };
+    public DataInitializer(DepartamentoService departamentoService,
+                           EmpleadoService empleadoService) {
+        this.departamentoService = departamentoService;
+        this.empleadoService = empleadoService;
+    }
+
+    @Override
+    public void run(String... args) {
+        if (!departamentoService.listarTodos().isEmpty()) {
+            return;
+        }
+
+        Departamento tecnologia = new Departamento();
+        tecnologia.setNombre("Tecnologia");
+        tecnologia.setUbicacion("Edificio Central");
+        tecnologia.setPresupuesto(new BigDecimal("10000.00"));
+        tecnologia = departamentoService.crear(tecnologia);
+
+        Departamento operaciones = new Departamento();
+        operaciones.setNombre("Operaciones");
+        operaciones.setUbicacion("Edificio Sur");
+        operaciones.setPresupuesto(new BigDecimal("8000.00"));
+        operaciones = departamentoService.crear(operaciones);
+
+        Empleado emp1 = new Empleado();
+        emp1.setNombre("Anita Solis Madrigal");
+        emp1.setCedula("112340567");
+        emp1.setEmail("anitasol@citi.com");
+        emp1.setPuesto(Puesto.JEFATURA);
+        emp1.setSalario(new BigDecimal("2800.00"));
+        emp1.setFechaIngreso(LocalDate.of(2023, 3, 15));
+        empleadoService.crear(emp1, tecnologia.getId());
+
+        Empleado emp2 = new Empleado();
+        emp2.setNombre("Carlos Sandi Flores");
+        emp2.setCedula("113450678");
+        emp2.setEmail("casandi@teletica.com");
+        emp2.setPuesto(Puesto.DESARROLLADOR);
+        emp2.setSalario(new BigDecimal("2100.00"));
+        emp2.setFechaIngreso(LocalDate.of(2024, 1, 10));
+        empleadoService.crear(emp2, tecnologia.getId());
+
+        Empleado emp3 = new Empleado();
+        emp3.setNombre("Valeria Mora Brenes");
+        emp3.setCedula("114560789");
+        emp3.setEmail("valeria.mora@ice.com");
+        emp3.setPuesto(Puesto.ANALISTA);
+        emp3.setSalario(new BigDecimal("1750.00"));
+        emp3.setFechaIngreso(LocalDate.of(2024, 6, 1));
+        empleadoService.crear(emp3, tecnologia.getId());
+
+        Empleado emp4 = new Empleado();
+        emp4.setNombre("Guillermo Corrales Giammattei");
+        emp4.setCedula("117800639");
+        emp4.setEmail("guillepro@citi.com");
+        emp4.setPuesto(Puesto.SOPORTE);
+        emp4.setSalario(new BigDecimal("1600.00"));
+        emp4.setFechaIngreso(LocalDate.of(2025, 2, 20));
+        empleadoService.crear(emp4, operaciones.getId());
+
+        Empleado emp5 = new Empleado();
+        emp5.setNombre("Heymi Lopez Vindas");
+        emp5.setCedula("117803282");
+        emp5.setEmail("hlopezm@vantive.com");
+        emp5.setPuesto(Puesto.ANALISTA);
+        emp5.setSalario(new BigDecimal("1850.00"));
+        emp5.setFechaIngreso(LocalDate.of(2025, 5, 12));
+        empleadoService.crear(emp5, operaciones.getId());
     }
 }
