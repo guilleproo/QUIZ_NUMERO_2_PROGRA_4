@@ -46,7 +46,7 @@ public class Empleado {
     @Column(name = "fecha_ingreso", nullable = false)
     private LocalDate fechaIngreso;
 
-    @NotNull(message = "El departamento es obligatorio")
+   // @NotNull(message = "El departamento es obligatorio")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "departamento_id", nullable = false)
     private Departamento departamento;
